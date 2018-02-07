@@ -45,7 +45,7 @@ func (srv resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//case "work", "workuri", "workid":
 	//case "publication", "publicationuri", "publicationid", "pub", "puburi", "pubid"
 	case "isbn":
-		q = fmt.Sprintf(query, "isbn", paths[2])
+		q = fmt.Sprintf(query, "isbn", strings.Replace(paths[2], "-", "", -1))
 	case "recordid", "tnr", "titlenr", "biblionr", "biblionumber":
 		q = fmt.Sprintf(query, "recordId", paths[2])
 	default:
