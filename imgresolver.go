@@ -5,9 +5,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -60,8 +65,7 @@ func (srv resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if es.Hits.Total == 0 {
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-		// TODO or 1-pixel invisible gif
+		notFound(w, r)
 		return
 	}
 
@@ -69,8 +73,8 @@ func (srv resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if imgURL := hit.Source.Image; imgURL != "" {
 			imgBytes, err := http.Get(imgURL)
 			if err != nil {
-				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-				// TODO or 1-pixel invisible gif
+				notFound(w, r)
+				return
 			}
 			io.Copy(w, imgBytes.Body)
 			w.Header().Set("Content-Type", "image/jpeg")
@@ -79,13 +83,37 @@ func (srv resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	notFound(w, r)
+}
+
+func notFound(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("notFoundImage") != "" {
+		img := image.NewRGBA(image.Rect(0, 0, 100, 150))
+		if rawColor := r.URL.Query().Get("color"); rawColor != "" {
+			if len(rawColor) == 6 {
+				red, green, blue := uint8(255), uint8(255), uint8(255)
+				if c, err := strconv.ParseInt(rawColor[0:2], 16, 32); err == nil {
+					red = uint8(c)
+				}
+				if c, err := strconv.ParseInt(rawColor[2:4], 16, 32); err == nil {
+					green = uint8(c)
+				}
+				if c, err := strconv.ParseInt(rawColor[4:6], 16, 32); err == nil {
+					blue = uint8(c)
+				}
+				clr := color.RGBA{red, green, blue, 255}
+				draw.Draw(img, img.Bounds(), &image.Uniform{clr}, image.ZP, draw.Src)
+			}
+		}
+		png.Encode(w, img)
+		return
+	}
 	http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-	// TODO or 1-pixel invisible gif
 }
 
 func main() {
 	httpAddr := flag.String("http", ":7001", "HTTP serve address")
-	esAddr := flag.String("es", "http://elasticsearch:9200", "Elasticsearch address")
+	esAddr := flag.String("es", "http://localhost:9200", "Elasticsearch address")
 
 	flag.Parse()
 
