@@ -1,3 +1,3 @@
 FROM alpine
 ADD imgresolver /imgresolver
-CMD ["/imgresolver", "--esAdr", "elasticsearch:9200"]
+CMD ["/imgresolver", "--es", "http://elasticsearch:9200"]
