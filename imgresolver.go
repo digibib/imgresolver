@@ -49,18 +49,20 @@ func (srv resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "recordid", "tnr", "titlenr", "biblionr", "biblionumber":
 		q = fmt.Sprintf(query, "recordId", paths[2])
 	default:
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		http.NotFound(w, r)
 		return
 	}
 
 	resp, err := http.Post(srv.es, "application/json", bytes.NewBufferString(q))
 	if err != nil {
+		log.Println(err.Error())
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	defer resp.Body.Close()
 	var es esResponse
 	if err := json.NewDecoder(resp.Body).Decode(&es); err != nil {
+		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -73,6 +75,7 @@ func (srv resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if imgURL := hit.Source.Image; imgURL != "" {
 			imgBytes, err := http.Get(imgURL)
 			if err != nil {
+				log.Println(err.Error())
 				notFound(w, r)
 				return
 			}
@@ -106,6 +109,7 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		png.Encode(w, img)
+		w.Header().Set("Content-Type", "image/png")
 		return
 	}
 	http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
