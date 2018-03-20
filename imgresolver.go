@@ -9,7 +9,6 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -73,16 +72,9 @@ func (srv resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	for _, hit := range es.Hits.Hits {
 		if imgURL := hit.Source.Image; imgURL != "" {
-			imgBytes, err := http.Get(imgURL)
-			if err != nil {
-				log.Println(err.Error())
-				notFound(w, r)
-				return
-			}
-			io.Copy(w, imgBytes.Body)
+			w.Header().Set("Cache-Control", "max-age=2592000") // 30 days
 			w.Header().Set("Content-Type", "image/jpeg")
-			imgBytes.Body.Close()
-			return
+			http.Redirect(w, r, imgURL, http.StatusPermanentRedirect)
 		}
 	}
 
